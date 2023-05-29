@@ -1,7 +1,12 @@
 - [基础概念](#基础概念)
   - [多request相互之间的影响](#多request相互之间的影响)
 - [常用命令](#常用命令)
+- [代码](#代码)
 - [插件](#插件)
+- [常见问题](#常见问题)
+  - [安装jdk后，没有jre目录](#安装jdk后没有jre目录)
+  - [java.net.BindException](#javanetbindexception)
+  - [命令行执行脚本jtl无法查看请求数据](#命令行执行脚本jtl无法查看请求数据)
 
 # 基础概念
 
@@ -54,6 +59,103 @@ jmeter -Jthreads=1000 -n -t test.jmx
 # Number of Threads: ${__P(threads)}
 ```
 
+# 代码
+
+```groovy
+命令行参数(
+    -Jvar=1  ${__P(var, 2)}
+    -n -t app.jmx -l log.jtl
+)
+内置函数()
+内置变量(
+    vars.get(name) 只能在线程组内共享，建议优先使用vars，再考虑props
+    vars.put(name, val)
+    props.get(name) 可以跨线程，建议通过-J、csv、自定义变量等模式变量使用vars
+    props.put(name, val)
+)
+常用元件(
+    User Defined Variables
+    Http Request Defaults
+    Http Header Manager
+)
+插件管理(
+  jmeter-plugins-manager
+)
+脚本代码(
+    Jmeter从3.1开始使用groovy作为默认的脚本，且内置了groovy引擎
+    HeaderManager
+    Header
+    DigestUtils(md5)
+)
+```
+
+```groovy
+请求头处理
+import org.apache.jmeter.protocol.http.control.HeaderManager;
+import org.apache.jmeter.protocol.http.control.Header;
+import org.apache.commons.codec.digest.DigestUtils;
+
+HeaderManager headerManager = sampler.getHeaderManager();
+String[] headers = headerManager.getHeaders();
+log.info("header length: " + headers.length);
+for(String header : headers) {
+    log.info(header);
+}
+
+// 当前时间戳
+String timestamp = System.currentTimeMillis();
+log.info("timestamp: " + timestamp);
+
+// 获取变量
+String sessionId = vars.get("sessionId");
+String signature = sessionId + timestamp + "test";
+log.info(signature);
+// MD5加密
+signature = DigestUtils.md5Hex(signature).toUpperCase();
+log.info(signature);
+
+// 增加请求头信息
+headerManager.add(new Header("signature", signature));
+headerManager.add(new Header("timestamp", timestamp));md5加密
+一般md5加密会把请求数据也作为加密字符串传入，所以需要特殊处理
+import org.apache.jmeter.protocol.http.control.HeaderManager;
+import org.apache.jmeter.protocol.http.control.Header;
+import org.apache.commons.codec.digest.DigestUtils;
+
+def reqBody = "{\"id\":\"\",\"classifyName\":\"林磊测试\"}";
+vars.put("reqBody", reqBody);
+
+HeaderManager headerManager = sampler.getHeaderManager();
+String timestamp = System.currentTimeMillis();
+String sessionId = vars.get("sessionId");
+
+// 这里使用了md5把请求数据加密
+// 上面的reqBody是一个json字符串，注意针对json里面的"需要使用\转义
+// http request的body data里面就可以直接使用${reqBody}
+// 如果对中文有限制，需要在http request的Content Encoding配置UTF-8
+String signature = sessionId + timestamp + reqBody + "skyfire";
+signature = DigestUtils.md5Hex(signature).toUpperCase();
+headerManager.add(new Header("signature", signature));
+headerManager.add(new Header("timestamp", timestamp));随机字符
+import org.apache.commons.lang3.RandomStringUtils
+
+// 中文
+def chinese = RandomStringUtils.random(5, 0x4e00, 0x9fa5, false, false);
+println chinese
+
+// 随机字符，不包含数字
+def english = RandomStringUtils.randomAlphabetic(10)
+println english
+
+// 随机字符，包含数字
+String charset = (('A'..'Z') + ('0'..'9') + ('a'..'z')).join();
+String randomString = RandomStringUtils.random(10, charset.toCharArray());
+println randomString
+
+// 随机字符，包含数字
+def randomString2 = RandomStringUtils.random(10, true, true)
+println randomString2Locust
+```
 
 # 插件
 
@@ -65,6 +167,14 @@ jmeter -Jthreads=1000 -n -t test.jmx
 ![](imgs/m8.png)
 
 # 常见问题
+
+## 安装jdk后，没有jre目录
+
+进入jdk安装目录后执行如下命令:
+
+```shell
+bin\jlink.exe --module-path jmods --add-modules java.desktop --output jre
+```
 
 ## java.net.BindException
 
