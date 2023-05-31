@@ -6,6 +6,7 @@
 - [常见问题](#常见问题)
   - [安装jdk后，没有jre目录](#安装jdk后没有jre目录)
   - [java.net.BindException](#javanetbindexception)
+  - [Unsupported class file major version](#unsupported-class-file-major-version)
   - [命令行执行脚本jtl无法查看请求数据](#命令行执行脚本jtl无法查看请求数据)
 
 # 基础概念
@@ -196,6 +197,14 @@ windows操作系统配置:
 3. 重启电脑
 
 ![](imgs/m5.png)
+
+## Unsupported class file major version
+
+这个错误通常是由于Groovy不支持Java 16或更高版本的类文件major version 62而导致的。你需要将Java版本降级为15或更低版本，并确保你的项目使用的Groovy版本与所选的Java版本兼容。
+
+JMeter 5.4.1支持Java 8, 9, 10, 11和12，它不支持Java 16。如果你正在使用Java 16，则需要降级到支持的版本之一才能使用JMeter 5.4.1
+
+自JMeter版本3.1以来，Groovy已成为JMeter的默认脚本语言
 
 ## 命令行执行脚本jtl无法查看请求数据
 
