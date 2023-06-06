@@ -91,12 +91,20 @@ jmeter -Jthreads=1000 -n -t test.jmx
 ```
 
 ```groovy
-请求头处理
+// 请求头处理
 import org.apache.jmeter.protocol.http.control.HeaderManager;
 import org.apache.jmeter.protocol.http.control.Header;
 import org.apache.commons.codec.digest.DigestUtils;
 
 HeaderManager headerManager = sampler.getHeaderManager();
+// 另外在preprocess处理里面需要对headerManager进行单独处理，否则可能导致每个接口的headers在无限递增
+if (headerManager == null) {
+  headerManager = new HeaderManager();
+}
+if (headerManager.size() > 0) {
+  headerManager.clear();
+}
+
 String[] headers = headerManager.getHeaders();
 log.info("header length: " + headers.length);
 for(String header : headers) {
@@ -117,12 +125,17 @@ log.info(signature);
 
 // 增加请求头信息
 headerManager.add(new Header("signature", signature));
-headerManager.add(new Header("timestamp", timestamp));md5加密
-一般md5加密会把请求数据也作为加密字符串传入，所以需要特殊处理
+headerManager.add(new Header("timestamp", timestamp)); 
+// 最后需要把header增加到当前请求里面
+sampler.setHeaderManager(headers);
+
+// md5加密
+// 一般md5加密会把请求数据也作为加密字符串传入，所以需要特殊处理
 import org.apache.jmeter.protocol.http.control.HeaderManager;
 import org.apache.jmeter.protocol.http.control.Header;
 import org.apache.commons.codec.digest.DigestUtils;
 
+// 如果这里不处理为字符串格式，需要在http request的请求头里面把json设置为字符串格式，不要使用json格式化后的样式了
 def reqBody = "{\"id\":\"\",\"classifyName\":\"林磊测试\"}";
 vars.put("reqBody", reqBody);
 
@@ -134,10 +147,13 @@ String sessionId = vars.get("sessionId");
 // 上面的reqBody是一个json字符串，注意针对json里面的"需要使用\转义
 // http request的body data里面就可以直接使用${reqBody}
 // 如果对中文有限制，需要在http request的Content Encoding配置UTF-8
-String signature = sessionId + timestamp + reqBody + "skyfire";
+String signature = sessionId + timestamp + reqBody + "xxx";
 signature = DigestUtils.md5Hex(signature).toUpperCase();
 headerManager.add(new Header("signature", signature));
-headerManager.add(new Header("timestamp", timestamp));随机字符
+headerManager.add(new Header("timestamp", timestamp)); 
+
+
+// 随机字符
 import org.apache.commons.lang3.RandomStringUtils
 
 // 中文
